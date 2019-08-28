@@ -777,7 +777,7 @@ const generateCategoricalChart = ({
       const { numericAxisName, cateAxisName } = this.constructor.getAxisNameByLayout(layout);
       const graphicalItems = findAllByType(children, GraphicalChild);
       const stackGroups = getStackGroupsByAxisId(
-        data, graphicalItems, `${numericAxisName}Id`, `${cateAxisName}Id`, stackOffset, reverseStackOrder
+        data, graphicalItems, `${numericAxisName}Id`, `${cateAxisName}Id`, stackOffset, reverseStackOrder, hiddenDataKeys
       );
       const axisObj = axisComponents.reduce((result, entry) => {
         const name = `${entry.axisType}Map`;
@@ -810,7 +810,7 @@ const generateCategoricalChart = ({
       });
 
       return {
-        formatedGraphicalItems, graphicalItems, offset, stackGroups,
+        formatedGraphicalItems, graphicalItems, offset, stackGroups, hiddenDataKeys,
         ...ticksObj, ...axisObj,
       };
     }
@@ -1333,7 +1333,19 @@ const generateCategoricalChart = ({
         } else if (data.inactive && idx !== -1) {
           hiddenDataKeys = [...prevHiddenDataKeys.filter((dataKey, i) => i !== idx)];
         }
-        return { hiddenDataKeys };
+        if (hiddenDataKeys !== prevHiddenDataKeys) {
+          const updateId = prevState.updateId + 1;
+          return {
+            updateId,
+            ...this.updateStateOfAxisMapsOffsetAndStackGroups({
+              props: this.props,
+              ...prevState,
+              hiddenDataKeys,
+              updateId,
+            }),
+          };
+        }
+        return {};
       }, () => {
         if (composed) {
           composed(data);

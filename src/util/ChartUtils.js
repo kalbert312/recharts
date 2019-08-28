@@ -681,7 +681,7 @@ export const getStackedData = (data, stackItems, offsetType) => {
 };
 
 export const getStackGroupsByAxisId = (
-  data, _items, numericAxisId, cateAxisId, offsetType, reverseStackOrder
+  data, _items, numericAxisId, cateAxisId, offsetType, reverseStackOrder, hiddenDataKeys = []
 ) => {
   if (!data) { return null; }
 
@@ -689,9 +689,9 @@ export const getStackGroupsByAxisId = (
   const items = reverseStackOrder ? _items.reverse() : _items;
 
   const stackGroups = items.reduce((result, item) => {
-    const { stackId, hide } = item.props;
+    const { dataKey, stackId, hide } = item.props;
 
-    if (hide) { return result; }
+    if (hide || hiddenDataKeys.indexOf(dataKey) !== -1) { return result; }
 
     const axisId = item.props[numericAxisId];
     const parentGroup = result[axisId] || { hasStack: false, stackGroups: {} };
