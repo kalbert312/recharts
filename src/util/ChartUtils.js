@@ -143,7 +143,7 @@ export const getMainColorOfGraphicItem = (item) => {
 };
 
 export const getLegendProps = ({
-  children, formatedGraphicalItems, legendWidth, legendContent,
+  children, formatedGraphicalItems, legendWidth, legendContent, hiddenDataKeys = [],
 }) => {
   const legendItem = findChildByType(children, Legend);
   if (!legendItem) { return null; }
@@ -169,7 +169,7 @@ export const getLegendProps = ({
       const { dataKey, name, legendType, hide } = item.props;
 
       return {
-        inactive: hide,
+        inactive: hide || hiddenDataKeys.indexOf(dataKey) !== -1,
         dataKey,
         type: legendItem.props.iconType || legendType || 'square',
         color: getMainColorOfGraphicItem(item),

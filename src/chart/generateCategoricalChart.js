@@ -109,6 +109,7 @@ const generateCategoricalChart = ({
         dataEndIndex: endIndex,
         activeTooltipIndex: -1,
         isTooltipActive: !_.isNil(defaultShowTooltip) ? defaultShowTooltip : false,
+        hiddenDataKeys: [],
       };
     };
 
@@ -574,7 +575,7 @@ const generateCategoricalChart = ({
 
     getFormatItems(props, currentState) {
       const { graphicalItems, stackGroups, offset, updateId, dataStartIndex,
-        dataEndIndex } = currentState;
+        dataEndIndex, hiddenDataKeys = [] } = currentState;
       const { barSize, layout, barGap, barCategoryGap, maxBarSize: globalMaxBarSize } = props;
       const { numericAxisName, cateAxisName } = this.constructor.getAxisNameByLayout(layout);
       const hasBar = this.constructor.hasBar(graphicalItems);
@@ -585,7 +586,7 @@ const generateCategoricalChart = ({
         const displayedData = this.constructor.getDisplayedData(
           props, { dataStartIndex, dataEndIndex }, item
         );
-        const { dataKey, maxBarSize: childMaxBarSize } = item.props;
+        const { dataKey, maxBarSize: childMaxBarSize, hide } = item.props;
         const numericAxisId = item.props[`${numericAxisName}Id`];
         const cateAxisId = item.props[`${cateAxisName}Id`];
         const axisObj = axisComponents.reduce((result, entry) => {
@@ -628,6 +629,7 @@ const generateCategoricalChart = ({
               [numericAxisName]: axisObj[numericAxisName],
               [cateAxisName]: axisObj[cateAxisName],
               animationId: updateId,
+              hide: hiddenDataKeys.indexOf(dataKey) !== -1 || hide,
             },
             childIndex: parseChildIndex(item, props.children),
             item,
@@ -768,7 +770,7 @@ const generateCategoricalChart = ({
      * @param {Number} updateId       The update id
      * @return {Object} state New state to set
      */
-    updateStateOfAxisMapsOffsetAndStackGroups({ props, dataStartIndex, dataEndIndex, updateId }) {
+    updateStateOfAxisMapsOffsetAndStackGroups({ props, dataStartIndex, dataEndIndex, hiddenDataKeys, updateId }) {
       if (!validateWidthHeight({ props })) { return null; }
 
       const { children, layout, stackOffset, data, reverseStackOrder } = props;
@@ -803,7 +805,7 @@ const generateCategoricalChart = ({
       const ticksObj = this.tooltipTicksGenerator(cateAxisMap);
 
       const formatedGraphicalItems = this.getFormatItems(props, {
-        ...axisObj, dataStartIndex, dataEndIndex, updateId,
+        ...axisObj, dataStartIndex, dataEndIndex, hiddenDataKeys, updateId,
         graphicalItems, stackGroups, offset,
       });
 
@@ -892,11 +894,11 @@ const generateCategoricalChart = ({
       if (box && this.legendInstance) {
         const { dataStartIndex, dataEndIndex, updateId } = this.state;
 
-        this.setState(
-          this.updateStateOfAxisMapsOffsetAndStackGroups({
-            props: this.props, dataStartIndex, dataEndIndex, updateId,
-          })
-        );
+        this.setState((prevState) => (
+            this.updateStateOfAxisMapsOffsetAndStackGroups({
+              props: this.props, dataStartIndex, dataEndIndex, hiddenDataKeys: prevState.hiddenDataKeys, updateId,
+            })
+        ));
       }
     };
 
@@ -908,13 +910,13 @@ const generateCategoricalChart = ({
         const { dataStartIndex, dataEndIndex } = data;
 
         if (!_.isNil(data.dataStartIndex) || !_.isNil(data.dataEndIndex)) {
-          this.setState({
+          this.setState((prevState) => ({
             dataStartIndex,
             dataEndIndex,
             ...this.updateStateOfAxisMapsOffsetAndStackGroups(
-              { props: this.props, dataStartIndex, dataEndIndex, updateId }
+              { props: this.props, dataStartIndex, dataEndIndex, hiddenDataKeys: prevState.hiddenDataKeys, updateId }
             ),
-          });
+          }));
         } else if (!_.isNil(data.activeTooltipIndex)) {
           const { chartX, chartY, activeTooltipIndex } = data;
           const { offset, tooltipTicks } = this.state;
@@ -944,11 +946,11 @@ const generateCategoricalChart = ({
       if (startIndex !== this.state.dataStartIndex || endIndex !== this.state.dataEndIndex) {
         const { updateId } = this.state;
 
-        this.setState(() => ({
+        this.setState((prevState) => ({
           dataStartIndex: startIndex,
           dataEndIndex: endIndex,
           ...this.updateStateOfAxisMapsOffsetAndStackGroups(
-            { props: this.props, dataStartIndex: startIndex, dataEndIndex: endIndex, updateId }
+            { props: this.props, dataStartIndex: startIndex, hiddenDataKeys: prevState.hiddenDataKeys, dataEndIndex: endIndex, updateId }
           ),
         }));
 
@@ -1297,13 +1299,13 @@ const generateCategoricalChart = ({
      * @return {ReactElement}            The instance of Legend
      */
     renderLegend() {
-      const { formatedGraphicalItems } = this.state;
+      const { formatedGraphicalItems, hiddenDataKeys } = this.state;
       const { children, width, height } = this.props;
       const margin = this.props.margin || {};
       const legendWidth = width - (margin.left || 0) - (margin.right || 0);
       const legendHeight = height - (margin.top || 0) - (margin.bottom || 0);
       const props = getLegendProps({
-        children, formatedGraphicalItems, legendWidth, legendHeight, legendContent,
+        children, formatedGraphicalItems, legendWidth, legendHeight, legendContent, hiddenDataKeys
       });
 
       if (!props) { return null; }
@@ -1317,8 +1319,27 @@ const generateCategoricalChart = ({
         margin,
         ref: (legend) => { this.legendInstance = legend; },
         onBBoxUpdate: this.handleLegendBBoxUpdate,
+        onClick: (data) => this.handleLegendClick(data, otherProps.onClick),
       });
     }
+
+    handleLegendClick = (data, composed) => {
+      this.setState((prevState) => {
+        let { hiddenDataKeys: prevHiddenDataKeys = [] } = prevState;
+        let hiddenDataKeys = prevHiddenDataKeys;
+        const idx = hiddenDataKeys.indexOf(data.dataKey);
+        if (!data.inactive && idx === -1) {
+          hiddenDataKeys = [...prevHiddenDataKeys, data.dataKey];
+        } else if (data.inactive && idx !== -1) {
+          hiddenDataKeys = [...prevHiddenDataKeys.filter((dataKey, i) => i !== idx)];
+        }
+        return { hiddenDataKeys };
+      }, () => {
+        if (composed) {
+          composed(data);
+        }
+      });
+    };
 
     /**
      * Draw Tooltip
@@ -1439,8 +1460,10 @@ const generateCategoricalChart = ({
       const item = this.filterFormatItem(element, displayName, index);
       if (!item) { return null; }
 
-      const graphicalItem = cloneElement(element, item.props);
-      const { isTooltipActive, tooltipAxis, activeTooltipIndex, activeLabel } = this.state;
+      const { isTooltipActive, tooltipAxis, activeTooltipIndex, activeLabel, hiddenDataKeys = [] } = this.state;
+      const isChildHidden = hiddenDataKeys.indexOf(item.item.props.dataKey) !== -1 || item.props.hide;
+      const graphicalItem = cloneElement(element, { ...item.props, hide: isChildHidden });
+
       const { children } = this.props;
       const tooltipItem = findChildByType(children, Tooltip);
       const { points, isRange, baseLine } = item.props;
