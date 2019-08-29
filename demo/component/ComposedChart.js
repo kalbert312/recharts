@@ -27,7 +27,7 @@ export default class Demo extends Component {
               margin={{ top: 20, right: 20, bottom: 5, left: 20 }}>
               <XAxis dataKey="name" />
               <YAxis />
-              <Legend layout="vertical" align="right" verticalAlign="middle"/>
+              <Legend layout="vertical" align="right" verticalAlign="middle" withSeriesToggling/>
               <CartesianGrid stroke="#f5f5f5" />
               <Tooltip />
               <Area type="monotone" dataKey='amt' fill="#8884d8" stroke="#8884d8" />
