@@ -1310,7 +1310,7 @@ const generateCategoricalChart = ({
 
       if (!props) { return null; }
 
-      const { item, ...otherProps } = props;
+      const { item, onClick, ...otherProps } = props;
 
       return cloneElement(item, {
         ...otherProps,
@@ -1319,7 +1319,7 @@ const generateCategoricalChart = ({
         margin,
         ref: (legend) => { this.legendInstance = legend; },
         onBBoxUpdate: this.handleLegendBBoxUpdate,
-        onClick: (data) => this.handleLegendClick(data, otherProps.onClick),
+        onClick: props.withSeriesToggling ? ((data) => this.handleLegendClick(data, otherProps.onClick)) : onClick,
       });
     }
 

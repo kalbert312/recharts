@@ -313,7 +313,7 @@ export default class Demo extends Component {
             <XAxis dataKey="name" />
             <YAxis yAxisId="a" />
             <YAxis yAxisId="b" orientation="right" />
-            <Legend />
+            <Legend withSeriesToggling/>
             <Tooltip />
             <CartesianGrid vertical={false} />
             <Bar yAxisId="a" dataKey="uv" onAnimationStart={this.handleBarAnimationStart} onAnimationEnd={this.handleBarAnimationEnd}>
