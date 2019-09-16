@@ -143,7 +143,7 @@ export const getMainColorOfGraphicItem = (item) => {
 };
 
 export const getLegendProps = ({
-  children, formatedGraphicalItems, legendWidth, legendContent,
+  children, formatedGraphicalItems, legendWidth, legendContent, hiddenDataKeys = [],
 }) => {
   const legendItem = findChildByType(children, Legend);
   if (!legendItem) { return null; }
@@ -169,7 +169,7 @@ export const getLegendProps = ({
       const { dataKey, name, legendType, hide } = item.props;
 
       return {
-        inactive: hide,
+        inactive: hide || hiddenDataKeys.indexOf(dataKey) !== -1,
         dataKey,
         type: legendItem.props.iconType || legendType || 'square',
         color: getMainColorOfGraphicItem(item),
@@ -681,7 +681,7 @@ export const getStackedData = (data, stackItems, offsetType) => {
 };
 
 export const getStackGroupsByAxisId = (
-  data, _items, numericAxisId, cateAxisId, offsetType, reverseStackOrder
+  data, _items, numericAxisId, cateAxisId, offsetType, reverseStackOrder, hiddenDataKeys = []
 ) => {
   if (!data) { return null; }
 
@@ -689,9 +689,9 @@ export const getStackGroupsByAxisId = (
   const items = reverseStackOrder ? _items.reverse() : _items;
 
   const stackGroups = items.reduce((result, item) => {
-    const { stackId, hide } = item.props;
+    const { dataKey, stackId, hide } = item.props;
 
-    if (hide) { return result; }
+    if (hide || hiddenDataKeys.indexOf(dataKey) !== -1) { return result; }
 
     const axisId = item.props[numericAxisId];
     const parentGroup = result[axisId] || { hasStack: false, stackGroups: {} };

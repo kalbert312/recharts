@@ -33,6 +33,7 @@ class DefaultLegendContent extends Component {
     onMouseEnter: PropTypes.func,
     onMouseLeave: PropTypes.func,
     onClick: PropTypes.func,
+    withSeriesToggling: PropTypes.bool,
   };
 
   static defaultProps = {
@@ -43,80 +44,104 @@ class DefaultLegendContent extends Component {
     inactiveColor: '#ccc',
   };
 
+  state = {
+    hoveredEntry: null,
+  };
+
   /**
    * Render the path of icon
-   * @param {Object} data Data of each legend item
-   * @return {String} Path element
+   * @param data {Object} Data of each legend item
+   * @param iconSize {number} icon size
+   * @return {{ width: number, height: number, rendered: ReactElement }}
    */
-  renderIcon(data) {
+  renderIcon(data, iconSize = SIZE) {
     const { inactiveColor } = this.props;
-    const halfSize = SIZE / 2;
-    const sixthSize = SIZE / 6;
-    const thirdSize = SIZE / 3;
+    const halfSize = iconSize / 2;
+    const sixthSize = iconSize / 6;
+    const thirdSize = iconSize / 3;
     const color = data.inactive ? inactiveColor : data.color;
 
     if (data.type === 'plainline') {
-      return (
-        <line
-          strokeWidth={4}
-          fill="none"
-          stroke={color}
-          strokeDasharray={data.payload.strokeDasharray}
-          x1={0}
-          y1={halfSize}
-          x2={SIZE}
-          y2={halfSize}
-          className="recharts-legend-icon"
-        />
-      );
+      return {
+        width: iconSize,
+        height: 4,
+        rendered: (
+          <line
+            strokeWidth={4}
+            fill="none"
+            stroke={color}
+            strokeDasharray={data.payload.strokeDasharray}
+            x1={0}
+            y1={halfSize}
+            x2={iconSize}
+            y2={halfSize}
+            className="recharts-legend-icon"
+          />
+        )
+      };
     } if (data.type === 'line') {
-      return (
-        <path
-          strokeWidth={4}
-          fill="none"
-          stroke={color}
-          d={`M0,${halfSize}h${thirdSize}
+      return {
+        width: iconSize,
+        height: iconSize,
+        rendered: (
+          <path
+            strokeWidth={4}
+            fill="none"
+            stroke={color}
+            d={`M0,${halfSize}h${thirdSize}
             A${sixthSize},${sixthSize},0,1,1,${2 * thirdSize},${halfSize}
-            H${SIZE}M${2 * thirdSize},${halfSize}
+            H${iconSize}M${2 * thirdSize},${halfSize}
             A${sixthSize},${sixthSize},0,1,1,${thirdSize},${halfSize}`}
-          className="recharts-legend-icon"
-        />
-      );
+            className="recharts-legend-icon"
+          />
+        )
+      };
     } if (data.type === 'rect') {
-      return (
-        <path
-          stroke="none"
-          fill={color}
-          d={`M0,${SIZE / 8}h${SIZE}v${SIZE * 3 / 4}h${-SIZE}z`}
-          className="recharts-legend-icon"
-        />
-      );
+      return {
+        width: iconSize,
+        height: (iconSize * 3 / 4),
+        rendered: (
+          <path
+            stroke="none"
+            fill={color}
+            d={`M0,0h${iconSize}v${iconSize * 3 / 4}h${-iconSize}z`}
+            className="recharts-legend-icon"
+          />
+        )
+      };
     }
 
-    return (
-      <Symbols
-        fill={color}
-        cx={halfSize}
-        cy={halfSize}
-        size={SIZE}
-        sizeType="diameter"
-        type={data.type}
-      />
-    );
+    return {
+      width: iconSize,
+      height: iconSize,
+      rendered: (
+        <Symbols
+          fill={color}
+          cx={halfSize}
+          cy={halfSize}
+          size={iconSize}
+          sizeType="diameter"
+          type={data.type}
+        />
+      ),
+    };
   }
+
+  onMouseEnterLI = (entry, event) => { console.log("ENTER"); this.setState({ hoveredEntry: entry }) };
+  onMouseLeaveLI = (entry, event) => { console.log("LEAVE"); this.setState({ hoveredEntry: null }) };
 
   /**
    * Draw items of legend
    * @return {ReactElement} Items
    */
   renderItems() {
-    const { payload, iconSize, layout, formatter } = this.props;
-    const viewBox = { x: 0, y: 0, width: SIZE, height: SIZE };
+    const { payload, iconSize, inactiveColor, layout, formatter, withSeriesToggling } = this.props;
+    const { hoveredEntry } = this.state;
     const itemStyle = {
       display: layout === 'horizontal' ? 'inline-block' : 'block',
       marginRight: 10,
     };
-    const svgStyle = { display: 'inline-block', verticalAlign: 'middle', marginRight: 4 };
+    const svgStyleBase = { display: 'inline-block', verticalAlign: 'middle', marginRight: 4, transition: "all ease .1s" };
 
     return payload.map((entry, i) => {
       const finalFormatter = entry.formatter || formatter;
@@ -130,15 +155,33 @@ class DefaultLegendContent extends Component {
         return null;
       }
 
+      const icon = this.renderIcon(entry, iconSize);
+
+      const offset = 10; // enough room for a glow
+      const viewBox = { x: offset / -2, y: offset / -2, width: icon.width + offset, height: icon.height + offset };
+
+      let svgStyle = {
+        ...svgStyleBase,
+      };
+
+      if (withSeriesToggling) {
+        const hovered = hoveredEntry && hoveredEntry.dataKey === entry.dataKey;
+        if (hovered) {
+          svgStyle.filter = `drop-shadow(0 0 3px ${entry.inactive ? inactiveColor : (entry.color || "currentColor")}`;
+        }
+      }
+
       return (
         <li
           className={className}
           style={itemStyle}
           key={`legend-item-${i}`}
           {...filterEventsOfChild(this.props, entry, i)}
+          onMouseEnter={(e) => this.onMouseEnterLI(entry, e)}
+          onMouseLeave={(e) => this.onMouseLeaveLI(entry, e)}
         >
-          <Surface width={iconSize} height={iconSize} viewBox={viewBox} style={svgStyle}>
-            {this.renderIcon(entry)}
+          <Surface width={icon.width + offset} height={icon.height + offset} viewBox={viewBox} style={svgStyle}>
+            {icon.rendered}
           </Surface>
           <span className="recharts-legend-item-text">
             {finalFormatter ? finalFormatter(entry.value, entry, i) : entry.value}

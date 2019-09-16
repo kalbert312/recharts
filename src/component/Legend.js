@@ -69,6 +69,7 @@ class Legend extends Component {
     onMouseLeave: PropTypes.func,
     onClick: PropTypes.func,
     onBBoxUpdate: PropTypes.func,
+    withSeriesToggling: PropTypes.bool,
   };
 
   static defaultProps = {
