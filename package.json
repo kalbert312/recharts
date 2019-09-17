@@ -1,6 +1,6 @@
 {
-  "name": "recharts",
-  "version": "1.7.1",
+  "name": "@watson-health-apps/recharts",
+  "version": "1.0.0",
   "description": "React charts",
   "main": "lib/index",
   "module": "es6/index",
@@ -41,14 +41,14 @@
     "test",
     "lint"
   ],
+  "publishConfig": {
+    "registry": "https://na.artifactory.swg-devops.com:443/artifactory/api/npm/wh-dxt-npm-local/"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/recharts/recharts.git"
+    "url": "https://github.ibm.com/wh-pr-insights/recharts.git"
   },
-  "author": "recharts group",
-  "bugs": {
-    "url": "https://github.com/recharts/recharts/issues"
-  },
+  "author": "",
   "homepage": "https://github.com/recharts/recharts",
   "peerDependencies": {
     "react": "^15.0.0 || ^16.0.0",
