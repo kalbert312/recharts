@@ -1,7 +1,7 @@
 {
   "name": "@watson-health-apps/recharts",
   "version": "1.0.0",
-  "description": "React charts",
+  "description": "React charts. Forked from recharts.",
   "main": "lib/index",
   "module": "es6/index",
   "jsnext:main": "es6/index",
